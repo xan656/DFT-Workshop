@@ -88,6 +88,76 @@ install_openmpi () {
     rm -rf openmpi-5.0.9
 }
 
+# ==========================
+# Non-MPI / Threaded Libraries
+# ==========================
+
+install_openblas () {
+    FILE="OpenBLAS-0.3.30.tar.gz"
+    PREFIX="$INSTALL_LOC/OpenBLAS/0.3.30"
+
+    [ ! -f "$FILE" ] && { echo "$FILE not found! Skipping OpenBLAS."; return 1; }
+
+    tar -xf "$FILE"
+    cd OpenBLAS-0.3.30 || return 1
+
+    safe_install "OpenBLAS 0.3.30" "$PREFIX" \
+" \
+make -j'$(nproc)' \
+&& make PREFIX='$PREFIX' install \
+"
+
+    cd .. || true
+    rm -rf OpenBLAS-0.3.30
+}
+
+install_lapack () {
+    FILE="lapack-3.12.1.tar.gz"
+    PREFIX="$INSTALL_LOC/LAPACK/3.12.1"
+
+    [ ! -f "$FILE" ] && { echo "$FILE not found! Skipping LAPACK."; return 1; }
+
+    tar -xf "$FILE"
+    cd lapack-3.12.1 || return 1
+    mkdir -p build && cd build || return 1
+
+    safe_install "LAPACK 3.12.1" "$PREFIX" \
+" \
+cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_INSTALL_PREFIX='$PREFIX' -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON .. \
+&& make -j'$(nproc)' \
+&& make install -j'$(nproc)' \
+"
+
+    cd ../.. || true
+    rm -rf lapack-3.12.1
+}
+
+# ==========================
+# MPI-enabled Libraries
+# ==========================
+
+install_pmix () {
+    FILE="pmix-5.0.9.tar.gz"
+    PREFIX="$INSTALL_LOC/pmix/5.0.9"
+
+    [ ! -f "$FILE" ] && { echo "$FILE not found! Skipping PMIx."; return 1; }
+
+    tar -xf "$FILE"
+    cd openpmix-5.0.9 || return 1
+
+    safe_install "PMIx 5.0.9" "$PREFIX" \
+" \
+./configure \
+  --prefix='$PREFIX' \
+  --enable-shared \
+  --disable-static \
+&& make -j'$(nproc)' \
+&& make install \
+"
+    cd .. || true
+    rm -rf openpmix-5.0.9
+}
+
 install_boost () {
     VERSION="1_89_0"
     FOLDER="boost_${VERSION//./_}"
@@ -131,46 +201,6 @@ install_fftw () {
     rm -rf fftw-3.3.10
 }
 
-install_openblas () {
-    FILE="OpenBLAS-0.3.30.tar.gz"
-    PREFIX="$INSTALL_LOC/OpenBLAS/0.3.30"
-
-    [ ! -f "$FILE" ] && { echo "$FILE not found! Skipping OpenBLAS."; return 1; }
-
-    tar -xf "$FILE"
-    cd OpenBLAS-0.3.30 || return 1
-
-    safe_install "OpenBLAS 0.3.30" "$PREFIX" \
-" \
-make -j'$(nproc)' \
-&& make PREFIX='$PREFIX' install \
-"
-
-    cd .. || true
-    rm -rf OpenBLAS-0.3.30
-}
-
-install_lapack () {
-    FILE="lapack-3.12.1.tar.gz"
-    PREFIX="$INSTALL_LOC/LAPACK/3.12.1"
-
-    [ ! -f "$FILE" ] && { echo "$FILE not found! Skipping LAPACK."; return 1; }
-
-    tar -xf "$FILE"
-    cd lapack-3.12.1 || return 1
-    mkdir -p build && cd build || return 1
-
-    safe_install "LAPACK 3.12.1" "$PREFIX" \
-" \
-cmake -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_INSTALL_PREFIX='$PREFIX' -DCMAKE_BUILD_TYPE=Release .. \
-&& make -j'$(nproc)' \
-&& make install -j'$(nproc)' \
-"
-
-    cd ../.. || true
-    rm -rf lapack-3.12.1
-}
-
 install_scalapack () {
     FILE="scalapack-2.2.2.tar.gz"
     PREFIX="$INSTALL_LOC/scalapack/2.2.2"
@@ -183,10 +213,10 @@ install_scalapack () {
 
     safe_install "Scalapack 2.2.2 (MPI)" "$PREFIX" \
 " \
-cmake .. -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_INSTALL_PREFIX='$PREFIX' -DCMAKE_BUILD_TYPE=Release \
- -DBLAS_LIBRARIES='$INSTALL_LOC/OpenBLAS/0.3.30/lib/libopenblas.a' \
- -DLAPACK_LIBRARIES='$INSTALL_LOC/LAPACK/3.12.1/lib/liblapack.a' \
- -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_C_COMPILER=mpicc \
+cmake .. -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX='$PREFIX' \
+-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+-DBLAS_LIBRARIES='$INSTALL_LOC/OpenBLAS/0.3.30/lib/libopenblas.so' \
+-DLAPACK_LIBRARIES='$INSTALL_LOC/LAPACK/3.12.1/lib/liblapack.so' \
 && make -j'$(nproc)' \
 && make install \
 "
@@ -194,6 +224,7 @@ cmake .. -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_INSTALL_PREFIX='$PREFIX' -DCMAK
     cd ../.. || true
     rm -rf scalapack-2.2.2
 }
+
 
 install_hdf5 () {
     FILE="hdf5_1.14.6.tar.gz"
@@ -306,7 +337,6 @@ install_wannier90() {
         && make install
 }
 
-
 install_nwchem () {
     VER="7.2.0"
     FILE="nwchem-${VER}.tar.gz"
@@ -353,7 +383,6 @@ make nwchem_config && \
 make -j\$(nproc) > make.log 2>&1 \
 "
 }
-
 
 install_qe () {
     FILE="q-e-qe-7.4.1.tar.gz"
@@ -428,8 +457,7 @@ for pkg in "$@"; do
         libint)    install_libint    || echo "libint failed, continuing..." ;;
         libxc)     install_libxc     || echo "libxc failed, continuing..." ;;
         json)      install_json      || echo "json failed, continuing..." ;;
-        wannier90) install_wannier90 || echo "wannier90 failed, continuing..." ;;
-	    nwchem)    install_nwchem    || echo "NWChem failed, continuing..." ;;
+        wannier90) install_wannier90 || echo "wannier90 failed, continuing..." ;; 
 	    qe)        install_qe        || echo "Quantum ESPRESSO failed, continuing..." ;;
         *)
             echo "Unknown package: $pkg"

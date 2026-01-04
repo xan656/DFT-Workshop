@@ -11,12 +11,16 @@ This workshop uses a **single installer script** to build a working
 Make sure the following tools are available:
 
 ```bash
-gcc g++ gfortran cmake make
+which gcc
+whcih g++
+which gfortran
+which cmake
+which make
 ````
 
 Otherwise
 ```bash
-sudo apt install build-essential cmake
+sudo apt install gcc gfortran cmake build-essential
 ```
 ---
 
@@ -89,7 +93,9 @@ source ~/.bashrc
 
 ```bash
 which mpicc
-ldd $INSTALL_LOC/scalapack/2.2.2/lib/libscalapack.so
+
+export INSTALL_LOC=<installation-directory_modules>
+ldd $INSTALL_LOC/scalapack/2.2.2/lib/libscalapack.so | grep -E 'blas|lapack'
 ```
 
 You should see:
