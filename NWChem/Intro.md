@@ -27,7 +27,7 @@ sudo apt install gcc gfortran cmake build-essential
 In install_modules.sh, change these paths such that it matches your suitable directory
 ```
 export INSTALL_LOC="${INSTALL_LOC:-/home/q/Documents/Computations/modules}"
-export INSTALL_NWCHEM="${INSTALL_NWCHEM:-/home/q/Documents/notes/IGCAR/DTDS/AbInitio}"
+export INSTALL_NWCHEM="${INSTALL_NWCHEM:-/home/q/Documents/notes/AbInitio}"
 ```
 
 Download these packages and put in `$INSTALL_LOC` location
